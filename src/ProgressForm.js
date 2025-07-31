@@ -234,7 +234,7 @@ export default function OnePieceTracker() {
             className="section-toggle"
             onClick={() => setShowHistory(!showHistory)}
           >
-            <span>📊 Historique récent {showHistory ? '▲' : '▼'}</span>
+            <span>📊 Historique r&eacute;cent {showHistory ? '▲' : '▼'}</span>
             {dailyProgress.length > 0 && (
               <span className="badge">{dailyProgress.length} jours</span>
             )}
