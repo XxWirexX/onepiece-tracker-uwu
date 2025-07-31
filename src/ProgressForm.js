@@ -126,26 +126,7 @@ export default function OnePieceTracker() {
     });
   }
 
-  function calculatePlan(ep) {
-    const today = getToday();
-    const daysLeft = Math.ceil((END_DATE - today) / (1000 * 60 * 60 * 24));
-    const episodesLeft = totalEpisodes - ep;
-    const perDay = daysLeft > 0 ? episodesLeft / daysLeft : episodesLeft;
-    setEpisodesPerDay(perDay > 0 ? perDay : 0);
 
-    const planArr = [];
-    for (let i = 1; i <= Math.min(daysLeft, 30); i++) { // Limiter à 30 jours pour l'affichage
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const episode = Math.min(Math.ceil(ep + perDay * i), totalEpisodes);
-      planArr.push({ 
-        date: date.toISOString().slice(0, 10), 
-        episode,
-        episodesToWatch: Math.ceil(perDay)
-      });
-    }
-    setPlan(planArr);
-  }
 
   // Calcul du progrès quotidien
   const dailyProgress = history.length > 0 ? (() => {
