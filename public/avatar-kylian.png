@@ -1,0 +1,4 @@
+// Avatar placeholders pour la démo. Remplace ces images par de vraies photos si tu veux !
+export async function GET(request) {
+  return new Response('Not implemented', { status: 404 });
+}
