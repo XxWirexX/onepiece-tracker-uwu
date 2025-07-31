@@ -194,7 +194,7 @@ export default function OnePieceTracker() {
       {profile.role === 'admin' && (
         <div className="update-section">
           <div style={{marginTop:16}}>
-            <label htmlFor="total-episodes">Nombre total d'épisodes :</label>
+            <label htmlFor="total-episodes">Nombre total d&apos;&eacute;pisodes :</label>
             <input
               id="total-episodes"
               type="number"
