@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 const TOTAL_EPISODES = 1100;
@@ -65,11 +65,32 @@ export default function OnePieceTracker() {
   }, [router]);
 
   // Mettre à jour le plan
+  const calculatePlan = useCallback((ep) => {
+    const today = getToday();
+    const daysLeft = Math.ceil((END_DATE - today) / (1000 * 60 * 60 * 24));
+    const episodesLeft = totalEpisodes - ep;
+    const perDay = daysLeft > 0 ? episodesLeft / daysLeft : episodesLeft;
+    setEpisodesPerDay(perDay > 0 ? perDay : 0);
+
+    const planArr = [];
+    for (let i = 1; i <= Math.min(daysLeft, 30); i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const episode = Math.min(Math.ceil(ep + perDay * i), totalEpisodes);
+      planArr.push({ 
+        date: date.toISOString().slice(0, 10), 
+        episode,
+        episodesToWatch: Math.ceil(perDay)
+      });
+    }
+    setPlan(planArr);
+  }, [totalEpisodes]);
+
   useEffect(() => {
     if (currentEpisode !== undefined) {
       calculatePlan(currentEpisode);
     }
-  }, [currentEpisode]);
+  }, [currentEpisode, calculatePlan]);
 
   async function handleSubmit() {
     if (!profile || profile.role !== 'user') return;
@@ -201,7 +222,7 @@ export default function OnePieceTracker() {
               onChange={handleTotalEpisodesChange}
               style={{marginLeft:8, width:80, background:'#fff', color:'#333'}}
             />
-            <span style={{marginLeft:8, fontSize:12, color:'#fff'}}>Modifiable uniquement par l'admin</span>
+            <span style={{marginLeft:8, fontSize:12, color:'#fff'}}>Modifiable uniquement par l&apos;admin</span>
           </div>
         </div>
       )}
@@ -241,7 +262,7 @@ export default function OnePieceTracker() {
           {showHistory && (
             <div className="section-content">
               {dailyProgress.length === 0 ? (
-                <div className="empty-state">Aucun historique pour l'instant</div>
+                <div className="empty-state">Aucun historique pour l&apos;instant</div>
               ) : (
                 <div className="history-list">
                   {dailyProgress.slice(0, 10).map((day, idx) => (

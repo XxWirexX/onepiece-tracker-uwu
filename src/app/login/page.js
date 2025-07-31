@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const profiles = [
   {
@@ -45,7 +46,7 @@ export default function Login() {
       <div style={{ display: 'flex', gap: 40 }}>
         {profiles.map(profile => (
           <div key={profile.name} style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSelect(profile)}>
-            <img src={profile.avatar} alt={profile.name} style={{ width: 120, height: 120, borderRadius: '50%', border: '4px solid #fff', marginBottom: 16, objectFit: 'cover', background: '#eee' }} />
+            <Image src={profile.avatar} alt={profile.name} width={120} height={120} style={{ borderRadius: '50%', border: '4px solid #fff', marginBottom: 16, objectFit: 'cover', background: '#eee' }} />
             <div style={{ color: 'white', fontWeight: 'bold', fontSize: 20 }}>{profile.name}</div>
           </div>
         ))}
