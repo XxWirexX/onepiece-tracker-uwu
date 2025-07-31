@@ -5,10 +5,19 @@ import { useRouter } from 'next/navigation';
 const TOTAL_EPISODES = 1100;
 const END_DATE = new Date('2025-11-30');
 
+
 function getToday() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return now;
+}
+
+// Renvoie la date du jour au format local YYYY-MM-DD
+function getLocalDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function formatDate(date) {
@@ -52,12 +61,18 @@ export default function OnePieceTracker() {
       const users = await userRes.json();
       const user = Array.isArray(users) ? users[0] : users;
       if (user) {
-        setCurrentEpisode(user.currentEpisode || 1);
-        setInputValue(user.currentEpisode || 1);
+        setCurrentEpisode(typeof user.currentEpisode === 'number' ? user.currentEpisode : 0);
+        setInputValue(typeof user.currentEpisode === 'number' ? user.currentEpisode : 0);
         setHistory(user.history || []);
       } else {
-        setCurrentEpisode(1);
-        setInputValue(1);
+        // Créer l'utilisateur en base si absent
+        await fetch('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: userName, role: 'user', currentEpisode: 0, history: [] })
+        });
+        setCurrentEpisode(0);
+        setInputValue(0);
         setHistory([]);
       }
     }
@@ -65,38 +80,52 @@ export default function OnePieceTracker() {
   }, [router]);
 
   // Mettre à jour le plan
-  const calculatePlan = useCallback((ep) => {
+  const calculatePlan = useCallback((ep, hist = history) => {
     const today = getToday();
     const daysLeft = Math.ceil((END_DATE - today) / (1000 * 60 * 60 * 24));
-    const episodesLeft = totalEpisodes - ep;
+    const todayStr = getLocalDateString(today);
+    const todayHistory = hist.find(h => h.date === todayStr);
+    const baseEpisode = todayHistory ? todayHistory.episode : ep;
+    const episodesLeft = totalEpisodes - baseEpisode;
     const perDay = daysLeft > 0 ? episodesLeft / daysLeft : episodesLeft;
     setEpisodesPerDay(perDay > 0 ? perDay : 0);
 
     const planArr = [];
-    for (let i = 1; i <= Math.min(daysLeft, 30); i++) {
+    // Si aucun épisode n'a été vu aujourd'hui, on commence à i=0 (jour courant), sinon à i=1 (demain)
+    const start = todayHistory ? 1 : 0;
+    let prevEpisode = baseEpisode;
+    let remainingDays = daysLeft;
+    let remainingEpisodes = totalEpisodes - prevEpisode;
+    for (let i = start; i < Math.min(daysLeft, 30) + start; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      const episode = Math.min(Math.ceil(ep + perDay * i), totalEpisodes);
+      // Recalculer le ratio à chaque jour
+      const perDayDynamic = remainingDays > 0 ? remainingEpisodes / remainingDays : remainingEpisodes;
+      const episodesToday = Math.ceil(perDayDynamic);
+      const episode = Math.min(prevEpisode + episodesToday, totalEpisodes);
       planArr.push({ 
-        date: date.toISOString().slice(0, 10), 
+        date: getLocalDateString(date),
         episode,
-        episodesToWatch: Math.ceil(perDay)
+        episodesToWatch: episodesToday > 0 ? episodesToday : 0
       });
+      prevEpisode = episode;
+      remainingDays--;
+      remainingEpisodes = totalEpisodes - prevEpisode;
     }
     setPlan(planArr);
-  }, [totalEpisodes]);
+  }, [totalEpisodes, history]);
 
   useEffect(() => {
     if (currentEpisode !== undefined) {
-      calculatePlan(currentEpisode);
+      calculatePlan(currentEpisode, history);
     }
-  }, [currentEpisode, calculatePlan]);
+  }, [currentEpisode, history, calculatePlan]);
 
   async function handleSubmit() {
     if (!profile || profile.role !== 'user') return;
     const newEp = Number(inputValue);
     if (newEp < 1 || newEp > totalEpisodes) return;
-    const todayStr = getToday().toISOString().slice(0, 10);
+    const todayStr = getLocalDateString(getToday());
     let hist = [...history];
     const idx = hist.findIndex(h => h.date === todayStr);
     if (idx >= 0) {
@@ -275,28 +304,19 @@ export default function OnePieceTracker() {
           {showPlan && (
             <div className="section-content">
               <div className="plan-list">
-                {(() => {
-                  // Si au moins 1 épisode a été regardé aujourd'hui, on retire le jour courant du plan
-                  const todayStr = getToday().toISOString().slice(0, 10);
-                  const hasWatchedToday = history.some(h => h.date === todayStr && h.episode > (history.find((h, i, arr) => arr[i-1]?.date === todayStr)?.episode || 0));
-                  let filteredPlan = plan;
-                  if (hasWatchedToday && plan.length > 0 && plan[0].date === todayStr) {
-                    filteredPlan = plan.slice(1);
-                  }
-                  return filteredPlan.map((day, idx) => (
-                    <div key={day.date} className="plan-item">
-                      <div className="plan-date">
-                        {formatDate(day.date)}
-                      </div>
-                      <div className="plan-target">
-                        Épisode {day.episode}
-                      </div>
-                      <div className="plan-episodes">
-                        (~{day.episodesToWatch} à regarder)
-                      </div>
+                {plan.map((day) => (
+                  <div key={day.date} className="plan-item">
+                    <div className="plan-date">
+                      {formatDate(day.date)}
                     </div>
-                  ));
-                })()}
+                    <div className="plan-target">
+                      Épisode {day.episode}
+                    </div>
+                    <div className="plan-episodes">
+                      (~{day.episodesToWatch} à regarder)
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

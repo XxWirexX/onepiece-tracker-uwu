@@ -9,10 +9,10 @@ export async function GET(req) {
 
 export async function POST(req) {
   await dbConnect();
-  const { name, role } = await req.json();
+  const { name, role = 'user', currentEpisode = 1, history = [] } = await req.json();
   let user = await User.findOne({ name });
   if (!user) {
-    user = await User.create({ name, role });
+    user = await User.create({ name, role, currentEpisode, history });
   }
   return Response.json({ ok: true, user });
 }
